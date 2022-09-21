@@ -1,10 +1,10 @@
-module xkit/xlog
+module github.com/coghost/xlog
 
 go 1.19
 
 require (
 	github.com/fatih/color v1.13.0
-	github.com/gookit/goutil v0.5.11
+	github.com/gookit/goutil v0.5.12
 	github.com/rs/zerolog v1.28.0
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 )
