@@ -32,6 +32,8 @@ type rotateConfig struct {
 	MaxBackups int
 	// MaxAge the max age in days to keep a logfile
 	MaxAge int
+
+	NoColor bool
 }
 
 type Logger struct {
@@ -46,22 +48,27 @@ type Logger struct {
 //
 // The output log file will be located at /var/log/service-xyz/service-xyz.log and
 // will be rolled according to configuration set.
-func newWriters(config rotateConfig, mode bool, defaultCaller bool) []io.Writer {
+func newWriters(config rotateConfig, withCaller bool, defaultCaller bool) []io.Writer {
 	var writers []io.Writer
 	var Green = color.New(color.FgGreen, color.Bold).SprintFunc()
+	color.NoColor = config.NoColor
 
+	var filename = func(i interface{}) string {
+		arr := strings.Split(i.(string), "/")
+		return Green(arr[len(arr)-1])
+	}
 	var cw = zerolog.ConsoleWriter{
 		Out:        os.Stdout,
 		TimeFormat: "15:04:05",
-		FormatCaller: func(i interface{}) string {
-			arr := strings.Split(i.(string), "/")
-			return Green(arr[len(arr)-1])
-		},
+		NoColor:    config.NoColor,
+	}
+	if withCaller {
+		cw.FormatCaller = filename
 	}
 
 	if config.ConsoleLoggingEnabled {
 		if defaultCaller {
-			writers = append(writers, zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: "15:04:05"})
+			writers = append(writers, zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: "15:04:05", NoColor: config.NoColor})
 		} else {
 			writers = append(writers, cw)
 		}

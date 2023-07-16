@@ -16,6 +16,10 @@ type LogOpts struct {
 	cfg *XLogCfg
 	wr  []io.Writer
 
+	noColor bool
+
+	caller bool
+
 	level zerolog.Level
 
 	timestampFn func() time.Time
@@ -35,9 +39,23 @@ func WithCfg(c *XLogCfg) LogOptFunc {
 	}
 }
 
+func WithCaller(b bool) LogOptFunc {
+	return func(o *LogOpts) {
+		o.caller = b
+	}
+}
+
+func WithNoColor(b bool) LogOptFunc {
+	return func(o *LogOpts) {
+		o.cfg.NoColor = b
+	}
+}
+
 func WithWr(wr io.Writer) LogOptFunc {
 	return func(o *LogOpts) {
-		o.wr = append(o.wr, wr)
+		if wr != nil {
+			o.wr = append(o.wr, wr)
+		}
 	}
 }
 
@@ -63,20 +81,46 @@ func UtcFn() time.Time {
 	return d
 }
 
+// InitLogForConsole inits xlog with level Info/Color enabled/Local time func
+//
+//	and only level is customizable.
+func InitLogForConsole(opts ...LogOptFunc) {
+	opt := LogOpts{level: zerolog.InfoLevel}
+	bindLogOpts(&opt, opts...)
+	InitLog(WithLevel(opt.level), WithNoColor(false), WithTimestampFunc(LocalFn))
+}
+
+func InitLogInfo(opts ...LogOptFunc) {
+	opt := LogOpts{level: zerolog.InfoLevel}
+	bindLogOpts(&opt, opts...)
+	InitLog(WithLevel(opt.level), WithNoColor(false), WithTimestampFunc(LocalFn))
+}
+
+func InitLogDebug(opts ...LogOptFunc) {
+	opt := LogOpts{level: zerolog.DebugLevel}
+	bindLogOpts(&opt, opts...)
+	InitLog(WithLevel(opt.level), WithNoColor(false), WithTimestampFunc(LocalFn))
+}
+
 func InitLog(opts ...LogOptFunc) {
 	cf := NewXLogCfg()
 
-	opt := LogOpts{cfg: cf, timestampFn: UtcFn, level: zerolog.DebugLevel}
+	opt := LogOpts{cfg: cf, timestampFn: UtcFn, level: zerolog.DebugLevel, noColor: false}
 	bindLogOpts(&opt, opts...)
 
 	lc := opt.cfg
 	wr := opt.wr
+	caller := opt.caller
 
 	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
 	zerolog.TimeFieldFormat = "2006-01-02T15:04:05.999Z"
 	zerolog.TimestampFunc = opt.timestampFn
 
-	setLog(lc.Level)
+	lvl := opt.level
+	if lvl < zerolog.Level(lc.Level) {
+		lvl = opt.level
+	}
+	setLog(int(lvl))
 
 	lcf := rotateConfig{
 		ConsoleLoggingEnabled: lc.LogToConsole,
@@ -87,17 +131,18 @@ func InitLog(opts ...LogOptFunc) {
 		MaxSize:               lc.MaxSize,
 		MaxBackups:            lc.MaxBackups,
 		MaxAge:                lc.MaxAge,
+		NoColor:               lc.NoColor,
 	}
 
 	refineFileCaller()
 
-	writers := newWriters(lcf, lc.Caller, lc.DefaultCaller)
+	writers := newWriters(lcf, caller, lc.DefaultCaller)
 	if len(wr) != 0 {
 		writers = append(writers, wr...)
 	}
 
 	mw := io.MultiWriter(writers...)
-	lg := configure(lcf, lc.Caller, mw)
+	lg := configure(lcf, caller, mw)
 	log.Logger = *lg.Logger
 }
 

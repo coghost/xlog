@@ -6,6 +6,8 @@ type XLogCfg struct {
 	// with full caller name or not
 	DefaultCaller bool `ini:"default_caller"`
 
+	NoColor bool `ini:"no_color"`
+
 	LogToConsole bool `ini:"log_to_console"`
 	LogToFile    bool `ini:"log_to_file"`
 	AsJson       bool `ini:"as_json"`
@@ -25,6 +27,7 @@ func NewXLogCfg() *XLogCfg {
 		LogToConsole:  true,
 		LogToFile:     true,
 		AsJson:        true,
+		NoColor:       true,
 
 		MaxSize:    10,
 		MaxAge:     0,
