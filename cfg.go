@@ -33,7 +33,7 @@ func NewXLogCfg() *XLogCfg {
 		MaxAge:     0,
 		MaxBackups: 0,
 
-		SaveToDir: "~/tmp/xkitlog",
+		SaveToDir: "/tmp/xkitlog",
 		FileName:  "xkit_log.log",
 	}
 }

@@ -99,7 +99,7 @@ func InitLogInfo(opts ...LogOptFunc) {
 func InitLogDebug(opts ...LogOptFunc) {
 	opt := LogOpts{level: zerolog.DebugLevel}
 	bindLogOpts(&opt, opts...)
-	InitLog(WithLevel(opt.level), WithNoColor(false), WithTimestampFunc(LocalFn))
+	InitLog(WithLevel(opt.level), WithNoColor(false), WithTimestampFunc(LocalFn), WithCaller(true))
 }
 
 func InitLog(opts ...LogOptFunc) {
