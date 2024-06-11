@@ -48,16 +48,17 @@ type Logger struct {
 //
 // The output log file will be located at /var/log/service-xyz/service-xyz.log and
 // will be rolled according to configuration set.
-func newWriters(config rotateConfig, withCaller bool, defaultCaller bool) []io.Writer {
+func newWriters(config rotateConfig, withCaller bool, defaultCaller bool, offset int) []io.Writer {
 	var writers []io.Writer
-	var Green = color.New(color.FgGreen, color.Bold).SprintFunc()
+	Green := color.New(color.FgGreen, color.Bold).SprintFunc()
 	color.NoColor = config.NoColor
 
-	var filename = func(i interface{}) string {
+	filename := func(i interface{}) string {
 		arr := strings.Split(i.(string), "/")
-		return Green(arr[len(arr)-1])
+		offset = min(len(arr), offset)
+		return Green(strings.Join(arr[len(arr)-offset:], "/"))
 	}
-	var cw = zerolog.ConsoleWriter{
+	cw := zerolog.ConsoleWriter{
 		Out:        os.Stdout,
 		TimeFormat: "15:04:05",
 		NoColor:    config.NoColor,

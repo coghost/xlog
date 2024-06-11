@@ -20,6 +20,8 @@ type LogOpts struct {
 
 	caller bool
 
+	callerOffset int
+
 	level zerolog.Level
 
 	timestampFn func() time.Time
@@ -42,6 +44,12 @@ func WithCfg(c *XLogCfg) LogOptFunc {
 func WithCaller(b bool) LogOptFunc {
 	return func(o *LogOpts) {
 		o.caller = b
+	}
+}
+
+func WithCallerOffset(i int) LogOptFunc {
+	return func(o *LogOpts) {
+		o.callerOffset = i
 	}
 }
 
@@ -87,25 +95,31 @@ func UtcFn() time.Time {
 func InitLogForConsole(opts ...LogOptFunc) {
 	opt := LogOpts{level: zerolog.InfoLevel}
 	bindLogOpts(&opt, opts...)
-	InitLog(WithLevel(opt.level), WithNoColor(false), WithTimestampFunc(LocalFn))
+
+	opts = append(opts, WithNoColor(false), WithTimestampFunc(LocalFn))
+	InitLog(opts...)
 }
 
 func InitLogInfo(opts ...LogOptFunc) {
 	opt := LogOpts{level: zerolog.InfoLevel}
 	bindLogOpts(&opt, opts...)
-	InitLog(WithLevel(opt.level), WithNoColor(false), WithTimestampFunc(LocalFn))
+
+	opts = append(opts, WithNoColor(false), WithTimestampFunc(LocalFn))
+	InitLog(opts...)
 }
 
 func InitLogDebug(opts ...LogOptFunc) {
 	opt := LogOpts{level: zerolog.DebugLevel}
 	bindLogOpts(&opt, opts...)
-	InitLog(WithLevel(opt.level), WithNoColor(false), WithTimestampFunc(LocalFn), WithCaller(true))
+
+	opts = append(opts, WithNoColor(false), WithTimestampFunc(LocalFn), WithCaller(true))
+	InitLog(opts...)
 }
 
 func InitLog(opts ...LogOptFunc) {
 	cf := NewXLogCfg()
 
-	opt := LogOpts{cfg: cf, timestampFn: UtcFn, level: zerolog.DebugLevel, noColor: false}
+	opt := LogOpts{cfg: cf, timestampFn: UtcFn, level: zerolog.DebugLevel, noColor: false, callerOffset: 1}
 	bindLogOpts(&opt, opts...)
 
 	lc := opt.cfg
@@ -134,9 +148,9 @@ func InitLog(opts ...LogOptFunc) {
 		NoColor:               lc.NoColor,
 	}
 
-	refineFileCaller()
+	refineFileCaller(opt.callerOffset)
 
-	writers := newWriters(lcf, caller, lc.DefaultCaller)
+	writers := newWriters(lcf, caller, lc.DefaultCaller, opt.callerOffset)
 	if len(wr) != 0 {
 		writers = append(writers, wr...)
 	}
@@ -154,10 +168,18 @@ func setLog(level int) {
 	zerolog.SetGlobalLevel(l)
 }
 
-func refineFileCaller() {
+func refineFileCaller(offset int) {
 	zerolog.CallerMarshalFunc = func(pc uintptr, file string, line int) string {
-		lst := strings.Split(file, "/")
-		file = lst[len(lst)-1]
+		arr := strings.Split(file, "/")
+
+		num := len(arr)
+		if num == 1 {
+			return file + ":" + strconv.Itoa(line)
+		}
+
+		wanted := arr[num-offset:]
+		file = strings.Join(wanted, "/")
+
 		return file + ":" + strconv.Itoa(line)
 	}
 }
