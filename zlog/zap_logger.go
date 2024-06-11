@@ -1,4 +1,4 @@
-package clog
+package zlog
 
 import (
 	"os"
